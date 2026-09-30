@@ -1,0 +1,54 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Plan your month</title>
+<link rel="stylesheet" href="style.css"><script src="common.js"></script></head><body><main>
+<nav><a href="setup.html">Plan</a><a href="daily.html">Daily update</a></nav>
+<h1>Plan your month</h1><p class="sub">Up to 5 goals: a monthly target and the hours per day you'll give each one.</p>
+<label for="month">Month</label><input type="month" id="month" style="max-width:220px">
+<p class="small">Days in month: <b id="days">-</b></p>
+<div id="goals"></div>
+<div class="row"><button id="add">+ Add goal</button><button class="primary" id="save">Save plan</button><span class="small" id="count"></span></div>
+<p class="err" id="err"></p>
+<script>
+const box = document.getElementById("goals"), monthEl = document.getElementById("month");
+const tpl = `<div class="card goal"><div class="head"><span class="t">Goal</span><button class="link rm">Remove</button></div>
+<div class="grid"><div class="wide"><label>Goal name</label><input class="name" maxlength="40" placeholder="DSA practice"></div>
+<div><label>Monthly target</label><input class="target" type="number" min="1" step="any" placeholder="60"></div>
+<div><label>Unit</label><input class="unit" maxlength="16" placeholder="problems"></div>
+<div><label>Hours per day</label><input class="hours" type="number" min="0.25" max="24" step="0.25" placeholder="3"></div></div>
+<p class="calc"></p></div>`;
+function add(g) {
+  if (box.children.length >= 5) return;
+  box.insertAdjacentHTML("beforeend", tpl);
+  const el = box.lastElementChild;
+  if (g) { el.querySelector(".name").value = g.name; el.querySelector(".target").value = g.target; el.querySelector(".unit").value = g.unit; el.querySelector(".hours").value = g.dailyHours; el.dataset.id = g.id; }
+  refresh();
+}
+function refresh() {
+  const d = monthEl.value ? daysIn(monthEl.value) : 0;
+  document.getElementById("days").textContent = d || "-";
+  [...box.children].forEach((el, i) => {
+    el.querySelector(".t").textContent = "Goal " + (i + 1);
+    const t = +el.querySelector(".target").value, h = +el.querySelector(".hours").value, u = el.querySelector(".unit").value || "units";
+    el.querySelector(".calc").innerHTML = t > 0 && h > 0 && d ? `Time budget: <b>${h * d} hrs</b> &middot; Pace: <b>${(t / d).toFixed(1)} ${u}/day</b>` : "";
+  });
+  document.getElementById("add").disabled = box.children.length >= 5;
+  document.getElementById("count").textContent = box.children.length + " of 5 goals";
+}
+box.addEventListener("input", refresh);
+box.addEventListener("click", e => { if (e.target.classList.contains("rm") && box.children.length > 1) { e.target.closest(".goal").remove(); refresh(); } });
+monthEl.addEventListener("change", loadMonth);
+document.getElementById("add").onclick = () => add();
+document.getElementById("save").onclick = async () => {
+  const err = document.getElementById("err"); err.textContent = "";
+  const goals = [...box.children].map(el => ({ id: el.dataset.id, name: el.querySelector(".name").value.trim(), target: +el.querySelector(".target").value, unit: el.querySelector(".unit").value.trim(), dailyHours: +el.querySelector(".hours").value }));
+  if (goals.some(g => !g.name || !(g.target > 0) || !g.unit || !(g.dailyHours > 0))) { err.textContent = "Fill in name, target, unit and hours for every goal."; return; }
+  try { await api("/api/plan/" + monthEl.value, { goals }); location.href = "daily.html?month=" + monthEl.value; }
+  catch (e) { err.textContent = e.message; }
+};
+async function loadMonth() {
+  box.innerHTML = "";
+  const p = monthEl.value && await api("/api/plan/" + monthEl.value);
+  if (p) p.goals.forEach(add); else add();
+  refresh();
+}
+monthEl.value = thisMonth(); loadMonth();
+</script></main></body></html>

@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Streak & Stats · Goal Tracker</title>
+<link rel="stylesheet" href="style.css">
+<script src="common.js"></script>
+<style>
+  .hero{padding:28px 0 16px}
+  .hero h1{font-size:2.2rem;margin:0;letter-spacing:-.03em}
+  .hero p{color:var(--muted);margin:4px 0 0;font-size:.95rem}
+
+  .section-heading{display:flex;align-items:center;gap:12px;margin:32px 0 14px}
+  .section-heading .s-icon{font-size:1.3rem}
+  .section-heading .s-text{font-size:1.1rem;font-weight:700}
+  .section-heading::after{content:'';flex:1;height:2px;background:var(--line);border-radius:2px}
+  .section-heading .s-sub{font-size:.78rem;color:var(--muted);white-space:nowrap}
+
+  /* big streak card */
+  .streak-hero{background:var(--card);border:1px solid var(--line);border-radius:18px;
+    padding:32px 24px;text-align:center;margin-bottom:14px;position:relative;overflow:hidden}
+.streak-num{font-size:5rem;font-weight:700;color:#e85d04;line-height:1}
+  .streak-unit{font-size:1rem;color:var(--muted);margin-top:4px;font-weight:600;
+    letter-spacing:.06em;text-transform:uppercase}
+  .streak-status{margin-top:12px;font-size:.92rem}
+  .s-alive{color:#e85d04;font-weight:700}
+  .s-broken{color:var(--warn);font-weight:700}
+
+  /* pills */
+  .pills{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+  .pill{flex:1 1 120px;background:var(--card);border:1px solid var(--line);
+    border-radius:12px;padding:14px 16px;text-align:center}
+  .pill-val{font-size:1.7rem;font-weight:700;color:var(--accent)}
+  .pill-lbl{font-size:.72rem;color:var(--muted);margin-top:3px}
+
+  /* heatmap */
+  .hm-wrap{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:20px;overflow-x:auto}
+  .hm-inner{display:inline-block;min-width:max-content}
+  .hm-months{display:flex;padding-left:30px;margin-bottom:4px}
+  .hm-mlbl{font-size:.7rem;color:var(--muted);font-weight:700;letter-spacing:.04em;
+    text-transform:uppercase;flex-shrink:0;text-align:left}
+  .hm-body{display:flex;gap:6px}
+  .hm-dlbls{display:flex;flex-direction:column;gap:3px;padding-top:2px;min-width:24px}
+  .hm-dlbl{font-size:.62rem;color:var(--muted);height:13px;line-height:13px;text-align:right}
+  .hm-grid{display:flex;gap:3px}
+  .hm-col{display:flex;flex-direction:column;gap:3px}
+  .hm-cell{width:13px;height:13px;border-radius:2px;cursor:default;flex-shrink:0;
+    position:relative;transition:transform .1s}
+  .hm-cell:hover{transform:scale(1.5);z-index:5}
+  .hm-cell[title]:hover::after{content:attr(title);position:absolute;bottom:17px;
+    left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);
+    font-size:.65rem;padding:3px 8px;border-radius:5px;white-space:nowrap;
+    pointer-events:none;z-index:10}
+  .c0{background:transparent}
+  .c1{background:var(--line)}
+  .c2{background:rgba(31,111,84,.28)}
+  .c3{background:rgba(31,111,84,.55)}
+  .c4{background:var(--accent)}
+  .c5{background:#0a5c39}
+  .cf{background:transparent;border:1px dashed var(--line)}
+  .cs{outline:2px solid #e85d04;outline-offset:1px;border-radius:2px}
+
+  .legend{display:flex;align-items:center;gap:6px;margin-top:12px;
+    flex-wrap:wrap;font-size:.74rem;color:var(--muted)}
+  .lb{width:12px;height:12px;border-radius:2px;flex-shrink:0;display:inline-block}
+
+  /* goal rows */
+  .goal-row{background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:14px 18px;margin-bottom:10px;display:flex;
+    justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+  .gr-name{font-weight:700}
+  .gr-stats{display:flex;gap:18px;flex-wrap:wrap}
+  .gr-stat{display:flex;flex-direction:column;align-items:center;min-width:52px}
+  .gr-val{font-size:1.3rem;font-weight:700;color:var(--accent)}
+  .gr-fire{color:#e85d04}
+  .gr-lbl{font-size:.68rem;color:var(--muted)}
+
+  .err-box{background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:24px;text-align:center;color:var(--muted)}
+  #loading{text-align:center;padding:40px;color:var(--muted)}
+</style>
+</head>
+<body>
+<main>
+<nav>
+  <a href="setup.html">📋 Plan</a>
+  <a href="daily.html">✏️ Daily Update</a>
+  <a href="streak.html">🔥 Streaks</a>
+</nav>
+<script>
+  // Mark current page nav link as active
+  document.querySelectorAll("nav a").forEach(a => {
+    if (a.href === location.href || location.pathname.endsWith(a.getAttribute("href"))) {
+      a.classList.add("active");
+    }
+  });
+</script>
+
+<div class="hero">
+  <h1>🔥 All-Time Streak</h1>
+  <p>Continuous streak across all months — breaks only when you skip a day.</p>
+</div>
+
+<div id="loading">Loading your streak data...</div>
+<div id="content" style="display:none">
+  <div id="streak-card"></div>
+  <div class="pills" id="pills"></div>
+
+  <div class="section-heading">
+    <span class="s-icon">📅</span>
+    <span class="s-text">Activity Heatmap</span>
+    <span class="s-sub">Last 6 months — hover a cell for details</span>
+  </div>
+  <div class="hm-wrap" id="heatmap"></div>
+
+  <div class="section-heading">
+    <span class="s-icon">🎯</span>
+    <span class="s-text">Per Goal Streak</span>
+    <span class="s-sub">Continuous all-time streak per goal</span>
+  </div>
+  <div id="goal-rows"></div>
+</div>
+<div id="err-area"></div>
+
+<script>
+/* ── date helpers (UTC-safe — avoids IST/timezone infinite loop) ── */
+function nextDay(d) {
+  const [y,m,day] = d.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m-1, day+1));
+  return dt.toISOString().slice(0,10);
+}
+function prevDay(d) {
+  const [y,m,day] = d.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m-1, day-1));
+  return dt.toISOString().slice(0,10);
+}
+function dowMon(d) { // Mon=0 .. Sun=6
+  const [y,m,day] = d.split("-").map(Number);
+  return (new Date(Date.UTC(y, m-1, day)).getUTCDay() + 6) % 7;
+}
+function fmtMon(d) {
+  const [y,m] = d.split("-").map(Number);
+  return new Date(Date.UTC(y, m-1, 1)).toLocaleString("default",{month:"short"});
+}
+
+/* ── build date→hours map from all months ── */
+function buildMap(allData) {
+  const m = {};
+  Object.values(allData).forEach(mp => {
+    if (!mp || !mp.logs) return;
+    Object.entries(mp.logs).forEach(([date, entries]) => {
+      if (!m[date]) m[date] = 0;
+      Object.values(entries).forEach(e => { m[date] += (e && e.hours) ? e.hours : 0; });
+    });
+  });
+  return m;
+}
+
+/* ── continuous streak ── */
+function streak(map, todayStr) {
+  const active = Object.keys(map).filter(d => map[d] > 0).sort();
+  if (!active.length) return { cur:0, best:0, days:0, streakSet: new Set() };
+
+  const earliest = active[0];
+
+  // current streak – walk backwards from today
+  const streakSet = new Set();
+  let ptr = todayStr, cur = 0;
+  while (ptr >= earliest) {
+    if (map[ptr] > 0) { streakSet.add(ptr); cur++; ptr = prevDay(ptr); }
+    else if (ptr === todayStr) { ptr = prevDay(ptr); } // today not logged yet = ok
+    else break;
+  }
+
+  // best streak – scan forwards from earliest to today
+  let best = 0, run = 0, scan = earliest;
+  while (scan <= todayStr) {
+    if (map[scan] > 0) { run++; if (run > best) best = run; }
+    else if (scan !== todayStr) run = 0;
+    scan = nextDay(scan);
+  }
+
+  return { cur, best, days: active.filter(d => d <= todayStr).length, streakSet, earliest };
+}
+
+/* ── GitHub-style heatmap (6 months, continuous) ── */
+function heatmap(map, streakSet, todayStr) {
+  // Start = first day of (today - 6 months), aligned to Monday
+  const startDt = new Date(todayStr + "T00:00:00");
+  startDt.setMonth(startDt.getMonth() - 6);
+  startDt.setDate(1);
+  while ((startDt.getDay() + 6) % 7 !== 0) startDt.setDate(startDt.getDate() - 1);
+  let startStr = startDt.toISOString().slice(0,10);
+
+  // End = today padded to Sunday
+  const endDt = new Date(todayStr + "T00:00:00");
+  while ((endDt.getDay() + 6) % 7 !== 6) endDt.setDate(endDt.getDate() + 1);
+  const endStr = endDt.toISOString().slice(0,10);
+
+  // Build weeks array
+  const weeks = []; let col = [], d = startStr;
+  while (d <= endStr) {
+    col.push(d);
+    if (dowMon(d) === 6) { weeks.push(col); col = []; }
+    d = nextDay(d);
+  }
+  if (col.length) weeks.push(col);
+
+  // Month label row
+  const CW = 16; // cell + gap
+  let lastM = "", mRow = "";
+  weeks.forEach(wk => {
+    const m = fmtMon(wk[0]);
+    mRow += '<span class="hm-mlbl" style="width:' + CW + 'px">' + (m !== lastM ? m : '') + '</span>';
+    lastM = m;
+  });
+
+  // Day label col
+  const dlbls = ["Mon","","Wed","","Fri","","Sun"]
+    .map(l => '<div class="hm-dlbl">' + l + '</div>').join("");
+
+  // Grid
+  const cols = weeks.map(wk => {
+    const cells = Array(7).fill(null);
+    wk.forEach(day => { cells[dowMon(day)] = day; });
+    return '<div class="hm-col">' + cells.map(day => {
+      if (!day) return '<div class="hm-cell c0"></div>';
+      const isFut = day > todayStr;
+      const hrs   = map[day] || 0;
+      const inStr = streakSet.has(day);
+      let cls = isFut ? "cf" : hrs===0 ? "c1" : hrs<1 ? "c2" : hrs<2 ? "c3" : hrs<4 ? "c4" : "c5";
+      if (inStr) cls += " cs";
+      const tip = isFut ? day+" (upcoming)" : hrs>0 ? day+": "+hrs.toFixed(1)+" hrs" : day+": not logged";
+      return '<div class="hm-cell ' + cls + '" title="' + tip + '"></div>';
+    }).join("") + '</div>';
+  }).join("");
+
+  return '<div class="hm-inner">' +
+    '<div class="hm-months">' + mRow + '</div>' +
+    '<div class="hm-body">' +
+      '<div class="hm-dlbls">' + dlbls + '</div>' +
+      '<div class="hm-grid">' + cols + '</div>' +
+    '</div>' +
+    '<div class="legend">Less &nbsp;' +
+      '<span class="lb c1"></span><span class="lb c2"></span>' +
+      '<span class="lb c3"></span><span class="lb c4"></span><span class="lb c5"></span>' +
+      '&nbsp; More &nbsp;&nbsp;' +
+      '<span class="lb c4 cs"></span> Current streak' +
+    '</div></div>';
+}
+
+/* ── per-goal streak ── */
+function goalStreak(gid, allData, todayStr) {
+  const gm = {};
+  Object.values(allData).forEach(mp => {
+    if (!mp || !mp.logs) return;
+    Object.entries(mp.logs).forEach(([date, entries]) => {
+      if (entries[gid] && entries[gid].hours > 0)
+        gm[date] = (gm[date] || 0) + entries[gid].hours;
+    });
+  });
+  const active = Object.keys(gm).filter(d => gm[d] > 0).sort();
+  if (!active.length) return { cur:0, best:0, days:0 };
+  const earliest = active[0];
+
+  let cur = 0, ptr = todayStr;
+  while (ptr >= earliest) {
+    if (gm[ptr] > 0) { cur++; ptr = prevDay(ptr); }
+    else if (ptr === todayStr) { ptr = prevDay(ptr); }
+    else break;
+  }
+  let best = 0, run = 0, scan = earliest;
+  while (scan <= todayStr) {
+    if (gm[scan] > 0) { run++; if (run > best) best = run; }
+    else if (scan !== todayStr) run = 0;
+    scan = nextDay(scan);
+  }
+  return { cur, best, days: active.filter(d => d <= todayStr).length };
+}
+
+/* ── MAIN ── */
+async function load() {
+  try {
+    const allData  = await api("/api/all").catch(() => ({}));
+    const map      = buildMap(allData);
+    const todayStr = today();
+    const { cur, best, days, streakSet, earliest } = streak(map, todayStr);
+
+    const loggedToday = (map[todayStr] || 0) > 0;
+    const status = cur === 0
+      ? '<span class="s-broken">Log today to start your streak!</span>'
+      : loggedToday
+        ? '<span class="s-alive">🔥 You logged today — keep it going!</span>'
+        : '<span class="s-alive">⚡ Log today to extend your streak!</span>';
+
+    document.getElementById("streak-card").innerHTML =
+      '<div class="streak-hero">' +
+        '<div class="streak-num">' + cur + '</div>' +
+        '<div class="streak-unit">Day Streak</div>' +
+        '<div class="streak-status">' + status + '</div>' +
+      '</div>';
+
+    // Summary pills
+    const activeDays = Object.keys(map).filter(d => map[d] > 0 && d <= todayStr);
+    const firstDay   = earliest || todayStr;
+    let totalDays = 0;
+    { let s = firstDay; while (s <= todayStr) { totalDays++; s = nextDay(s); } }
+    const consist  = totalDays ? Math.round(activeDays.length / totalDays * 100) : 0;
+    const totalHrs = Object.values(map).reduce((a, b) => a + b, 0);
+
+    document.getElementById("pills").innerHTML =
+      pill(best + "d", "🏆 Best Streak") +
+      pill(activeDays.length, "✅ Active Days") +
+      pill(consist + "%", "📊 Consistency") +
+      pill(totalHrs.toFixed(0) + "h", "⏱ Total Hours");
+
+    // Heatmap
+    document.getElementById("heatmap").innerHTML =
+      Object.keys(allData).length === 0
+        ? '<div style="padding:20px;text-align:center;color:var(--muted)">No data yet — start logging!</div>'
+        : heatmap(map, streakSet, todayStr);
+
+    // Per-goal rows
+    const allGoals = {};
+    Object.values(allData).forEach(mp => {
+      if (mp && mp.goals) mp.goals.forEach(g => { allGoals[g.id] = g.name; });
+    });
+    document.getElementById("goal-rows").innerHTML =
+      Object.keys(allGoals).length === 0
+        ? '<div class="err-box">No goals found.</div>'
+        : Object.entries(allGoals).map(([gid, name]) => {
+            const s = goalStreak(gid, allData, todayStr);
+            return '<div class="goal-row">' +
+              '<span class="gr-name">' + name + '</span>' +
+              '<div class="gr-stats">' +
+                gstat(s.cur,  "🔥 Current", "gr-fire") +
+                gstat(s.best, "🏆 Best",    "") +
+                gstat(s.days, "✅ Days",    "") +
+              '</div></div>';
+          }).join("");
+
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("content").style.display = "";
+
+  } catch (err) {
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("err-area").innerHTML =
+      '<div class="err-box">⚠️ Something went wrong: ' + err.message +
+      '<br><small>Check the console for details.</small></div>';
+    console.error("Streak page error:", err);
+  }
+}
+
+function pill(v, l) {
+  return '<div class="pill"><div class="pill-val">' + v + '</div><div class="pill-lbl">' + l + '</div></div>';
+}
+function gstat(v, l, cls) {
+  return '<div class="gr-stat"><span class="gr-val ' + cls + '">' + v + '</span><span class="gr-lbl">' + l + '</span></div>';
+}
+
+load();
+</script>
+</main>
+</body>
+</html>
+
+

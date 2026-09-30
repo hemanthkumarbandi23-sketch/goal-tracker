@@ -1,0 +1,25 @@
+:root{--bg:#f3f5f1;--ink:#1d2a24;--muted:#5f6d66;--line:#cfd8d1;--card:#fff;--accent:#1f6f54;--on:#fff;--warn:#b3261e}
+@media(prefers-color-scheme:dark){:root{--bg:#141a17;--ink:#e6eee9;--muted:#93a39a;--line:#2c3832;--card:#1b231f;--accent:#4cc19a;--on:#0d1a14;--warn:#ff8a80}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Trebuchet MS","Segoe UI",system-ui,sans-serif}
+main{max-width:760px;margin:0 auto;padding:28px 16px 64px}
+h1{font-size:2rem;margin:0 0 4px;letter-spacing:-.02em} h2{font-size:1.2rem;margin:28px 0 10px}
+.sub{color:var(--muted);margin:0 0 20px}
+label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:4px}
+input{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-weight:700}
+.grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:640px){.grid{grid-template-columns:1fr 1fr}.wide{grid-column:1/-1}}
+button{font:inherit;cursor:pointer;border-radius:8px;padding:10px 16px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+button.primary{background:var(--accent);color:var(--on);border-color:var(--accent);font-weight:700}
+button.link{border:none;background:none;color:var(--warn);padding:4px 8px}
+button:disabled{opacity:.5;cursor:not-allowed}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:16px}
+.calc,.small{font-size:.9rem;color:var(--muted)} .err{color:var(--warn);min-height:1.2em;font-size:.9rem}
+.bar{height:10px;background:var(--line);border-radius:5px;overflow:hidden;margin:4px 0 10px}
+.bar>div{height:100%;background:var(--accent)}
+nav{display:flex;gap:16px;margin-bottom:20px} nav a{color:var(--accent);font-weight:700}
+.score{font-size:2.4rem;font-weight:700}

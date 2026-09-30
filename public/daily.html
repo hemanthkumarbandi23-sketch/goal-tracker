@@ -1,0 +1,57 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Daily update</title>
+<link rel="stylesheet" href="style.css"><script src="common.js"></script></head><body><main>
+<nav><a href="setup.html">Plan</a><a href="daily.html">Daily update</a></nav>
+<h1>Daily update</h1><p class="sub">Log the time and units you did. Editing a day you already saved replaces it.</p>
+<label for="date">Date</label><input type="date" id="date" style="max-width:220px">
+<div id="form" style="margin-top:16px"></div>
+<div class="row"><button class="primary" id="save">Save day</button><span class="small" id="status"></span></div>
+<h2>Today's score</h2><div class="card"><div class="score" id="score">0%</div><p class="small">Each goal counts up to 100% (hours spent / planned hours), then we average them.</p></div>
+<h2>Month progress</h2><div id="progress"></div>
+<script>
+let plan, month = new URLSearchParams(location.search).get("month") || thisMonth();
+const dateEl = document.getElementById("date");
+const cap = (a, b) => Math.min(a / b, 1);
+async function init() {
+  plan = await api("/api/plan/" + month);
+  if (!plan) return location.replace("setup.html");
+  dateEl.min = month + "-01"; dateEl.max = month + "-" + pad(daysIn(month));
+  dateEl.value = today().startsWith(month) ? today() : month + "-01";
+  dateEl.onchange = render; render();
+}
+function render() {
+  const day = plan.logs[dateEl.value] || {};
+  document.getElementById("form").innerHTML = plan.goals.map(g => {
+    const e = day[g.id] || {};
+    return `<div class="card" data-id="${g.id}"><div class="head">${g.name}<span class="small">plan: ${g.dailyHours} hrs/day</span></div>
+    <div class="grid2"><div><label>Hours spent</label><input class="h" type="number" min="0" max="24" step="0.25" value="${e.hours ?? ""}"></div>
+    <div><label>${g.unit} done</label><input class="u" type="number" min="0" step="any" value="${e.units ?? ""}"></div></div></div>`;
+  }).join("");
+  document.getElementById("form").oninput = stats;
+  stats();
+}
+function current() {
+  const o = {};
+  document.querySelectorAll("#form .card").forEach(c => { o[c.dataset.id] = { hours: +c.querySelector(".h").value || 0, units: +c.querySelector(".u").value || 0 }; });
+  return o;
+}
+function stats() {
+  const cur = current(), logs = { ...plan.logs, [dateEl.value]: cur }, n = plan.goals.length;
+  const score = plan.goals.reduce((s, g) => s + cap(cur[g.id].hours, g.dailyHours), 0) / n;
+  document.getElementById("score").textContent = Math.round(score * 100) + "%";
+  const d = daysIn(month);
+  document.getElementById("progress").innerHTML = plan.goals.map(g => {
+    let hrs = 0, units = 0;
+    Object.values(logs).forEach(day => { if (day[g.id]) { hrs += day[g.id].hours; units += day[g.id].units; } });
+    const budget = g.dailyHours * d, hp = Math.min(hrs / budget * 100, 100), up = Math.min(units / g.target * 100, 100);
+    return `<div class="card"><div class="head">${g.name}</div>
+    <div class="small">Time: ${hrs} / ${budget} hrs (${Math.round(hp)}%)</div><div class="bar"><div style="width:${hp}%"></div></div>
+    <div class="small">${g.unit}: ${units} / ${g.target} (${Math.round(up)}%)</div><div class="bar"><div style="width:${up}%"></div></div></div>`;
+  }).join("");
+}
+document.getElementById("save").onclick = async () => {
+  const s = document.getElementById("status");
+  try { plan = await api("/api/plan/" + month + "/log", { date: dateEl.value, entries: current() }); s.textContent = "Saved " + dateEl.value; stats(); }
+  catch (e) { s.textContent = e.message; }
+};
+init();
+</script></main></body></html>
